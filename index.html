@@ -13,397 +13,129 @@
 <link rel="stylesheet" href="style.css?v=2">
 <title>Academic Calendar</title>
 </head>
-
 <body>
-
 <header class="topbar">
   <div>
     <h1>Academic Calendar</h1>
     <p>Classes · Exams · Meetings · Deadlines · Labs</p>
   </div>
-
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <button type="button" class="secondary" id="notifyBtn">
-      Enable Notifications
-    </button>
-
-    <button class="primary" id="addBtn">
-      + Add Event
-    </button>
-  </div>
+  <button class="primary" id="addBtn">+ Add Event</button>
 </header>
 
-
 <main class="container">
-
   <section class="toolbar">
-
     <div class="month-nav">
-
-      <button class="icon-btn" id="prevBtn">
-        ‹
-      </button>
-
+      <button class="icon-btn" id="prevBtn">‹</button>
       <h2 id="monthTitle"></h2>
-
-      <button class="icon-btn" id="nextBtn">
-        ›
-      </button>
-
-      <button class="today-btn" id="todayBtn">
-        Today
-      </button>
-
+      <button class="icon-btn" id="nextBtn">›</button>
+      <button class="today-btn" id="todayBtn">Today</button>
     </div>
-
-
     <select id="filter">
-
-      <option value="All">
-        All Categories
-      </option>
-
-      <option value="Supervisor">
-        Supervisor
-      </option>
-
-      <option value="Viva">
-        Viva
-      </option>
-
-      <option value="Class">
-        Class
-      </option>
-
-      <option value="ExtraClass">
-        Extra Class
-      </option>
-
-      <option value="Exam">
-        Exam
-      </option>
-
-      <option value="Submission">
-        Document Submission
-      </option>
-
-      <option value="Office">
-        Office Work
-      </option>
-
-      <option value="Professor">
-        Professor Meeting
-      </option>
-
-      <option value="Conference">
-        Conference
-      </option>
-
-      <option value="Abstract">
-        Abstract Submission
-      </option>
-
-      <option value="Presentation">
-        Presentation
-      </option>
-
-      <option value="LabHours">
-        Lab Hours
-      </option>
-
-      <option value="LabClass">
-        Lab Class
-      </option>
-
-      <option value="Other">
-        Other
-      </option>
-
+      <option value="All">All Categories</option>
+      <option value="Supervisor">Supervisor</option>
+      <option value="Viva">Viva</option>
+      <option value="Class">Class</option>
+      <option value="ExtraClass">Extra Class</option>
+      <option value="Exam">Exam</option>
+      <option value="Submission">Document Submission</option>
+      <option value="Office">Office Work</option>
+      <option value="Professor">Professor Meeting</option>
+      <option value="Conference">Conference</option>
+      <option value="Abstract">Abstract Submission</option>
+      <option value="Presentation">Presentation</option>
+      <option value="LabHours">Lab Hours</option>
+      <option value="LabClass">Lab Class</option>
+      <option value="Other">Other</option>
     </select>
-
   </section>
-
 
   <section class="calendar-card">
-
     <div class="weekdays">
-
-      <div>Sun</div>
-      <div>Mon</div>
-      <div>Tue</div>
-      <div>Wed</div>
-      <div>Thu</div>
-      <div>Fri</div>
-      <div>Sat</div>
-
+      <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
+      <div>Thu</div><div>Fri</div><div>Sat</div>
     </div>
-
     <div id="calendarGrid" class="calendar-grid"></div>
-
   </section>
-
 
   <section class="upcoming">
-
     <h2>Upcoming Events</h2>
-
     <div id="upcoming"></div>
-
   </section>
-
 </main>
 
-
 <div id="modal" class="modal hidden">
-
   <div class="modal-box">
-
     <div class="modal-head">
-
-      <h2 id="modalTitle">
-        Add Event
-      </h2>
-
-      <button class="close" id="closeBtn">
-        ×
-      </button>
-
+      <h2 id="modalTitle">Add Event</h2>
+      <button class="close" id="closeBtn">×</button>
     </div>
 
-
     <form id="eventForm">
-
       <input type="hidden" id="eventId">
 
-
-      <label>
-        Event / Activity
-
-        <input
-          id="title"
-          required
-          placeholder="e.g. Meeting with Supervisor"
-        >
-
+      <label>Event / Activity
+        <input id="title" required placeholder="e.g. Meeting with Supervisor">
       </label>
 
-
-      <label>
-        Category
-
+      <label>Category
         <select id="category" required>
-
-          <option value="Supervisor">
-            Supervisor
-          </option>
-
-          <option value="Viva">
-            Viva
-          </option>
-
-          <option value="Class">
-            Class
-          </option>
-
-          <option value="ExtraClass">
-            Extra Class
-          </option>
-
-          <option value="Exam">
-            Exam
-          </option>
-
-          <option value="Submission">
-            Document Submission
-          </option>
-
-          <option value="Office">
-            Office Work
-          </option>
-
-          <option value="Professor">
-            Professor Meeting
-          </option>
-
-          <option value="Conference">
-            Conference
-          </option>
-
-          <option value="Abstract">
-            Abstract Submission
-          </option>
-
-          <option value="Presentation">
-            Presentation
-          </option>
-
-          <option value="LabHours">
-            Lab Hours
-          </option>
-
-          <option value="LabClass">
-            Lab Class
-          </option>
-
-          <option value="Other">
-            Other
-          </option>
-
+          <option value="Supervisor">Supervisor</option>
+          <option value="Viva">Viva</option>
+          <option value="Class">Class</option>
+          <option value="ExtraClass">Extra Class</option>
+          <option value="Exam">Exam</option>
+          <option value="Submission">Document Submission</option>
+          <option value="Office">Office Work</option>
+          <option value="Professor">Professor Meeting</option>
+          <option value="Conference">Conference</option>
+          <option value="Abstract">Abstract Submission</option>
+          <option value="Presentation">Presentation</option>
+          <option value="LabHours">Lab Hours</option>
+          <option value="LabClass">Lab Class</option>
+          <option value="Other">Other</option>
         </select>
-
       </label>
 
-
       <div class="two">
-
-        <label>
-          Start date
-
-          <input
-            type="date"
-            id="startDate"
-            required
-          >
-
-        </label>
-
-
-        <label>
-          End date
-
-          <input
-            type="date"
-            id="endDate"
-          >
-
-        </label>
-
+        <label>Start date<input type="date" id="startDate" required></label>
+        <label>End date<input type="date" id="endDate"></label>
       </div>
 
-
       <div class="two">
-
-        <label>
-          Start time
-
-          <input
-            type="time"
-            id="startTime"
-          >
-
-        </label>
-
-
-        <label>
-          End time
-
-          <input
-            type="time"
-            id="endTime"
-          >
-
-        </label>
-
+        <label>Start time<input type="time" id="startTime"></label>
+        <label>End time<input type="time" id="endTime"></label>
       </div>
 
-
-      <label>
-        Location
-
-        <input
-          id="location"
-          placeholder="Department office / Lab / Classroom"
-        >
-
+      <label>Location
+        <input id="location" placeholder="Department office / Lab / Classroom">
       </label>
 
-
-      <label>
-        Repeat
-
+      <label>Repeat
         <select id="recurring">
-
-          <option value="None">
-            Does not repeat
-          </option>
-
-          <option value="Daily">
-            Daily
-          </option>
-
-          <option value="Weekly">
-            Weekly
-          </option>
-
-          <option value="Monthly">
-            Monthly
-          </option>
-
+          <option value="None">Does not repeat</option>
+          <option value="Daily">Daily</option>
+          <option value="Weekly">Weekly</option>
+          <option value="Monthly">Monthly</option>
         </select>
-
       </label>
 
-
-      <label>
-        Notes
-
-        <textarea
-          id="description"
-          placeholder="Additional details"
-        ></textarea>
-
+      <label>Notes
+        <textarea id="description" placeholder="Additional details"></textarea>
       </label>
-
 
       <div class="actions">
-
-        <button
-          type="button"
-          class="danger"
-          id="deleteBtn"
-        >
-          Delete
-        </button>
-
+        <button type="button" class="danger" id="deleteBtn">Delete</button>
         <span></span>
-
-        <button
-          type="button"
-          class="secondary"
-          id="cancelBtn"
-        >
-          Cancel
-        </button>
-
-        <button
-          type="submit"
-          class="primary"
-        >
-          Save Event
-        </button>
-
+        <button type="button" class="secondary" id="cancelBtn">Cancel</button>
+        <button type="submit" class="primary">Save Event</button>
       </div>
-
     </form>
-
   </div>
-
 </div>
-
 
 <div id="toast" class="toast"></div>
+<div id="loading" class="loading hidden">Loading…</div>
 
-<div id="loading" class="loading hidden">
-  Loading…
-</div>
-
-<!-- Existing calendar JavaScript -->
 <script src="app.js?v=2"></script>
-
-<!-- Firebase notification JavaScript -->
-<script
-  type="module"
-  src="notifications.js?v=4">
-</script>
 </body>
 </html>
