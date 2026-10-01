@@ -1,1643 +1,422 @@
 // ============================================================
 // ACADEMIC CALENDAR PWA
+// JSONP version: avoids browser CORS restrictions with Apps Script.
 // ============================================================
 
-// PUT YOUR GOOGLE APPS SCRIPT /exec URL HERE
-const API_URL =
-  'https://script.google.com/macros/s/AKfycbxSqCl2soPeedUu8ZbNa19RCRYswUzp95CeRwWg4WgORT5Po6U7TRhub81vlBg5qfkz/exec';
-
+const API_URL = 'https://script.google.com/macros/s/AKfycbxSqCl2soPeedUu8ZbNa19RCRYswUzp95CeRwWg4WgORT5Po6U7TRhub81vlBg5qfkz/exec';
 
 let events = [];
 let currentDate = new Date();
 let editingId = null;
 
-
-// ============================================================
-// INITIALIZATION
-// ============================================================
-
-document.addEventListener(
-  'DOMContentLoaded',
-  function () {
-
-    console.log('Academic Calendar JS loaded.');
-
-    registerServiceWorker();
-
-    setupButtons();
-
-    loadEvents();
-
-  }
-);
-
-
-// ============================================================
-// BUTTONS
-// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Academic Calendar JS loaded.');
+  registerServiceWorker();
+  setupButtons();
+  loadEvents();
+});
 
 function setupButtons() {
-
-  document
-    .getElementById('addBtn')
-    .onclick = function () {
-
-      openAdd();
-
-    };
-
-
-  document
-    .getElementById('prevBtn')
-    .onclick = function () {
-
-      currentDate.setMonth(
-        currentDate.getMonth() - 1
-      );
-
-      render();
-
-    };
-
-
-  document
-    .getElementById('nextBtn')
-    .onclick = function () {
-
-      currentDate.setMonth(
-        currentDate.getMonth() + 1
-      );
-
-      render();
-
-    };
-
-
-  document
-    .getElementById('todayBtn')
-    .onclick = function () {
-
-      currentDate = new Date();
-
-      render();
-
-    };
-
-
-  document
-    .getElementById('filter')
-    .onchange = function () {
-
-      render();
-
-    };
-
-
-  document
-    .getElementById('closeBtn')
-    .onclick = closeModal;
-
-
-  document
-    .getElementById('cancelBtn')
-    .onclick = closeModal;
-
-
-  document
-    .getElementById('deleteBtn')
-    .onclick =
-      deleteCurrent;
-
-
-  document
-    .getElementById('eventForm')
-    .onsubmit =
-      saveEvent;
-
-
-  document
-    .getElementById('modal')
-    .onclick = function (e) {
-
-      if (
-        e.target ===
-        document.getElementById('modal')
-      ) {
-
-        closeModal();
-
-      }
-
-    };
-
+  $('addBtn').onclick = () => openAdd();
+  $('prevBtn').onclick = () => { currentDate.setMonth(currentDate.getMonth()-1); render(); };
+  $('nextBtn').onclick = () => { currentDate.setMonth(currentDate.getMonth()+1); render(); };
+  $('todayBtn').onclick = () => { currentDate = new Date(); render(); };
+  $('filter').onchange = render;
+  $('closeBtn').onclick = closeModal;
+  $('cancelBtn').onclick = closeModal;
+  $('deleteBtn').onclick = deleteCurrent;
+  $('eventForm').onsubmit = saveEvent;
+  $('modal').onclick = e => { if (e.target === $('modal')) closeModal(); };
 }
-
-
-// ============================================================
-// SERVICE WORKER
-// ============================================================
 
 function registerServiceWorker() {
-
-  if (
-    'serviceWorker' in navigator
-  ) {
-
-    navigator
-      .serviceWorker
-      .register('./sw.js')
-      .then(function () {
-
-        console.log(
-          'Service worker registered.'
-        );
-
-      })
-      .catch(function (error) {
-
-        console.error(
-          'Service worker error:',
-          error
-        );
-
-      });
-
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(console.error);
   }
-
 }
-
-
-// ============================================================
-// LOAD EVENTS
-// ============================================================
 
 function loadEvents() {
-
-  console.log(
-    'Loading events...'
-  );
-
-
-  // ----------------------------------------------------------
-  // Check API URL
-  // ----------------------------------------------------------
-
-  if (
-    API_URL.includes('PASTE_')
-  ) {
-
-    console.warn(
-      'Apps Script URL has not been added.'
-    );
-
-
-    events = JSON.parse(
-      localStorage.getItem(
-        'calendarEvents'
-      ) || '[]'
-    );
-
-
+  if (!API_URL || API_URL.includes('PASTE_')) {
+    events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
     render();
-
     hideLoading();
-
+    showToast('Add your Apps Script /exec URL in app.js.');
     return;
-
   }
-
 
   showLoading();
 
-
-  jsonp(
-    API_URL +
-    '?action=events'
-  )
-
-    .then(function (data) {
-
-      console.log(
-        'API response:',
-        data
-      );
-
-
-      if (
-        !data.success
-      ) {
-
-        throw new Error(
-          data.message ||
-          'Unable to load events.'
-        );
-
-      }
-
-
-      events =
-        data.events || [];
-
-
-      localStorage.setItem(
-        'calendarEvents',
-        JSON.stringify(events)
-      );
-
-
+  jsonpRequest(API_URL + '?action=events')
+    .then(data => {
+      if (!data.success) throw new Error(data.message || 'Could not load events.');
+      events = data.events || [];
+      localStorage.setItem('calendarEvents', JSON.stringify(events));
       render();
-
     })
-
-
-    .catch(function (error) {
-
-      console.error(
-        'API ERROR:',
-        error
-      );
-
-
-      events = JSON.parse(
-        localStorage.getItem(
-          'calendarEvents'
-        ) || '[]'
-      );
-
-
+    .catch(err => {
+      console.error('API ERROR:', err);
+      events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
       render();
-
-
-      showToast(
-        'Using offline calendar data.'
-      );
-
+      showToast('Could not connect to Google Sheets. Showing saved data.');
     })
-
-
-    .finally(function () {
-
-      hideLoading();
-
-    });
-
+    .finally(hideLoading);
 }
 
+function jsonpRequest(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName =
+      '__calendar_jsonp_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
 
-// ============================================================
-// JSONP
-// ============================================================
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Apps Script request timed out.'));
+    }, 20000);
 
-function jsonp(url) {
+    window[callbackName] = data => {
+      clearTimeout(timeout);
+      cleanup();
+      resolve(data);
+    };
 
-  return new Promise(
-    function (resolve, reject) {
+    script.onerror = () => {
+      clearTimeout(timeout);
+      cleanup();
+      reject(new Error('Could not connect to Apps Script.'));
+    };
 
-      const callbackName =
-        'calendarCallback_' +
-        Date.now();
+    const separator = url.includes('?') ? '&' : '?';
+    script.src =
+      url +
+      separator +
+      'prefix=' +
+      encodeURIComponent(callbackName);
 
+    document.head.appendChild(script);
 
-      const script =
-        document.createElement(
-          'script'
-        );
-
-
-      const timeout =
-        setTimeout(
-          function () {
-
-            cleanup();
-
-            reject(
-              new Error(
-                'Apps Script request timed out.'
-              )
-            );
-
-          },
-          15000
-        );
-
-
-      window[callbackName] =
-        function (data) {
-
-          clearTimeout(
-            timeout
-          );
-
-          cleanup();
-
-          resolve(data);
-
-        };
-
-
-      script.onerror =
-        function () {
-
-          clearTimeout(
-            timeout
-          );
-
-          cleanup();
-
-          reject(
-            new Error(
-              'Could not connect to Apps Script.'
-            )
-          );
-
-        };
-
-
-      script.src =
-        url +
-        '&prefix=' +
-        encodeURIComponent(
-          callbackName
-        );
-
-
-      document
-        .head
-        .appendChild(script);
-
-
-      function cleanup() {
-
-        delete window[
-          callbackName
-        ];
-
-        script.remove();
-
-      }
-
+    function cleanup() {
+      delete window[callbackName];
+      script.remove();
     }
-  );
-
+  });
 }
 
+function apiAction(action, payload) {
+  let url = API_URL + '?action=' + encodeURIComponent(action);
 
-// ============================================================
-// RENDER EVERYTHING
-// ============================================================
+  if (action === 'delete') {
+    url += '&id=' + encodeURIComponent(payload);
+  } else {
+    url += '&data=' + encodeURIComponent(JSON.stringify(payload));
+  }
+
+  return jsonpRequest(url);
+}
 
 function render() {
-
   renderCalendar();
-
   renderUpcoming();
-
 }
-
-
-// ============================================================
-// CALENDAR
-// ============================================================
 
 function renderCalendar() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
-  console.log(
-    'Rendering calendar...'
-  );
+  $('monthTitle').textContent =
+    currentDate.toLocaleDateString('en-IN', {month:'long', year:'numeric'});
 
-
-  const year =
-    currentDate.getFullYear();
-
-
-  const month =
-    currentDate.getMonth();
-
-
-  const monthTitle =
-    currentDate.toLocaleDateString(
-      'en-IN',
-      {
-        month: 'long',
-        year: 'numeric'
-      }
-    );
-
-
-  document.getElementById(
-    'monthTitle'
-  ).textContent =
-    monthTitle;
-
-
-  const grid =
-    document.getElementById(
-      'calendarGrid'
-    );
-
-
+  const grid = $('calendarGrid');
   grid.innerHTML = '';
 
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const previousMonthDays = new Date(year, month, 0).getDate();
+  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+  const filter = $('filter').value;
 
-  const firstDay =
-    new Date(
-      year,
-      month,
-      1
-    ).getDay();
+  for (let i = 0; i < totalCells; i++) {
+    let date, dayNumber, otherMonth = false;
 
-
-  const daysInMonth =
-    new Date(
-      year,
-      month + 1,
-      0
-    ).getDate();
-
-
-  const previousMonthDays =
-    new Date(
-      year,
-      month,
-      0
-    ).getDate();
-
-
-  const totalCells =
-    Math.ceil(
-      (
-        firstDay +
-        daysInMonth
-      ) / 7
-    ) * 7;
-
-
-  const filter =
-    document.getElementById(
-      'filter'
-    ).value;
-
-
-  for (
-    let i = 0;
-    i < totalCells;
-    i++
-  ) {
-
-    let date;
-
-    let dayNumber;
-
-    let otherMonth = false;
-
-
-    if (
-      i < firstDay
-    ) {
-
-      dayNumber =
-        previousMonthDays -
-        firstDay +
-        i +
-        1;
-
-
-      date =
-        new Date(
-          year,
-          month - 1,
-          dayNumber
-        );
-
-
+    if (i < firstDay) {
+      dayNumber = previousMonthDays - firstDay + i + 1;
+      date = new Date(year, month - 1, dayNumber);
       otherMonth = true;
-
-    }
-
-    else if (
-      i >=
-      firstDay +
-      daysInMonth
-    ) {
-
-      dayNumber =
-        i -
-        firstDay -
-        daysInMonth +
-        1;
-
-
-      date =
-        new Date(
-          year,
-          month + 1,
-          dayNumber
-        );
-
-
+    } else if (i >= firstDay + daysInMonth) {
+      dayNumber = i - firstDay - daysInMonth + 1;
+      date = new Date(year, month + 1, dayNumber);
       otherMonth = true;
-
+    } else {
+      dayNumber = i - firstDay + 1;
+      date = new Date(year, month, dayNumber);
     }
 
-    else {
+    const cell = document.createElement('div');
+    cell.className = 'day' + (otherMonth ? ' other' : '') +
+      (sameDay(date, new Date()) ? ' today' : '');
 
-      dayNumber =
-        i -
-        firstDay +
-        1;
-
-
-      date =
-        new Date(
-          year,
-          month,
-          dayNumber
-        );
-
-    }
-
-
-    const cell =
-      document.createElement(
-        'div'
-      );
-
-
-    cell.className =
-      'day';
-
-
-    if (otherMonth) {
-
-      cell.classList.add(
-        'other'
-      );
-
-    }
-
-
-    if (
-      isSameDay(
-        date,
-        new Date()
-      )
-    ) {
-
-      cell.classList.add(
-        'today'
-      );
-
-    }
-
-
-    const number =
-      document.createElement(
-        'div'
-      );
-
-
-    number.className =
-      'daynum';
-
-
-    number.textContent =
-      dayNumber;
-
-
-    cell.appendChild(
-      number
-    );
-
+    const number = document.createElement('div');
+    number.className = 'daynum';
+    number.textContent = dayNumber;
+    cell.appendChild(number);
 
     if (!otherMonth) {
-
-      cell.onclick =
-        function () {
-
-          openAdd(
-            formatDate(date)
-          );
-
-        };
-
+      cell.onclick = () => openAdd(formatDate(date));
     }
 
+    const dateString = formatDate(date);
+    let dayEvents = events.filter(e => e.startDate === dateString);
 
-    const dateString =
-      formatDate(date);
-
-
-    let dayEvents =
-      events.filter(
-        function (event) {
-
-          return (
-            event.startDate ===
-            dateString
-          );
-
-        }
-      );
-
-
-    if (
-      filter !== 'All'
-    ) {
-
-      dayEvents =
-        dayEvents.filter(
-          function (event) {
-
-            return (
-              event.category ===
-              filter
-            );
-
-          }
-        );
-
+    if (filter !== 'All') {
+      dayEvents = dayEvents.filter(e => e.category === filter);
     }
 
+    dayEvents.sort(compareEvents).forEach(event => {
+      const el = document.createElement('div');
+      el.className = 'event ' + event.category;
+      el.textContent =
+        (event.startTime ? displayTime(event.startTime) + ' ' : '') +
+        event.title;
+      el.title = event.title;
+      el.onclick = ev => {
+        ev.stopPropagation();
+        openEdit(event.id);
+      };
+      cell.appendChild(el);
+    });
 
-    dayEvents
-      .sort(compareEvents)
-      .forEach(
-        function (event) {
-
-          const element =
-            document.createElement(
-              'div'
-            );
-
-
-          element.className =
-            'event ' +
-            event.category;
-
-
-          element.textContent =
-            (
-              event.startTime
-                ? displayTime(
-                    event.startTime
-                  ) + ' '
-                : ''
-            ) +
-            event.title;
-
-
-          element.title =
-            event.title;
-
-
-          element.onclick =
-            function (e) {
-
-              e.stopPropagation();
-
-              openEdit(
-                event.id
-              );
-
-            };
-
-
-          cell.appendChild(
-            element
-          );
-
-        }
-      );
-
-
-    grid.appendChild(
-      cell
-    );
-
+    grid.appendChild(cell);
   }
-
 }
-
-
-// ============================================================
-// UPCOMING
-// ============================================================
 
 function renderUpcoming() {
-
-  const container =
-    document.getElementById(
-      'upcoming'
-    );
-
-
+  const container = $('upcoming');
   container.innerHTML = '';
 
+  const today = new Date();
+  today.setHours(0,0,0,0);
 
-  const today =
-    new Date();
+  const upcoming = events
+    .filter(e => parseDate(e.startDate) >= today)
+    .sort(compareEvents)
+    .slice(0,10);
 
+  if (!upcoming.length) {
+    container.innerHTML = '<div class="up-meta">No upcoming events.</div>';
+    return;
+  }
 
-  today.setHours(
-    0,
-    0,
-    0,
-    0
-  );
+  upcoming.forEach(event => {
+    const item = document.createElement('div');
+    item.className = 'up-item';
+    item.onclick = () => openEdit(event.id);
 
-
-  const upcoming =
-    events
-      .filter(
-        function (event) {
-
-          return (
-            parseDate(
-              event.startDate
-            ) >= today
-          );
-
-        }
-      )
-      .sort(
-        compareEvents
-      )
-      .slice(
-        0,
-        10
-      );
-
-
-  if (
-    upcoming.length === 0
-  ) {
-
-    container.innerHTML =
+    const main = document.createElement('div');
+    main.innerHTML =
+      '<div class="up-title">' + escapeHtml(event.title) + '</div>' +
       '<div class="up-meta">' +
-      'No upcoming events.' +
+      displayDate(event.startDate) +
+      (event.startTime ? ' · ' + displayTime(event.startTime) : '') +
+      (event.location ? ' · ' + escapeHtml(event.location) : '') +
       '</div>';
 
-    return;
+    const tag = document.createElement('span');
+    tag.className = 'tag ' + event.category;
+    tag.textContent = categoryName(event.category);
 
-  }
-
-
-  upcoming.forEach(
-    function (event) {
-
-      const item =
-        document.createElement(
-          'div'
-        );
-
-
-      item.className =
-        'up-item';
-
-
-      item.onclick =
-        function () {
-
-          openEdit(
-            event.id
-          );
-
-        };
-
-
-      const main =
-        document.createElement(
-          'div'
-        );
-
-
-      main.innerHTML =
-        '<div class="up-title">' +
-        escapeHtml(
-          event.title
-        ) +
-        '</div>' +
-
-        '<div class="up-meta">' +
-        displayDate(
-          event.startDate
-        ) +
-
-        (
-          event.startTime
-            ? ' · ' +
-              displayTime(
-                event.startTime
-              )
-            : ''
-        ) +
-
-        (
-          event.location
-            ? ' · ' +
-              escapeHtml(
-                event.location
-              )
-            : ''
-        ) +
-
-        '</div>';
-
-
-      const tag =
-        document.createElement(
-          'span'
-        );
-
-
-      tag.className =
-        'tag ' +
-        event.category;
-
-
-      tag.textContent =
-        categoryName(
-          event.category
-        );
-
-
-      item.appendChild(
-        main
-      );
-
-
-      item.appendChild(
-        tag
-      );
-
-
-      container.appendChild(
-        item
-      );
-
-    }
-  );
-
+    item.append(main, tag);
+    container.appendChild(item);
+  });
 }
-
-
-// ============================================================
-// ADD EVENT
-// ============================================================
 
 function openAdd(date) {
-
   editingId = null;
+  $('modalTitle').textContent = 'Add Event';
+  $('eventForm').reset();
+  $('eventId').value = '';
+  $('deleteBtn').style.display = 'none';
 
-
-  document.getElementById(
-    'modalTitle'
-  ).textContent =
-    'Add Event';
-
-
-  document.getElementById(
-    'eventForm'
-  ).reset();
-
-
-  document.getElementById(
-    'eventId'
-  ).value =
-    '';
-
-
-  document.getElementById(
-    'deleteBtn'
-  ).style.display =
-    'none';
-
-
-  const selectedDate =
-    date ||
-    formatDate(
-      new Date()
-    );
-
-
-  document.getElementById(
-    'startDate'
-  ).value =
-    selectedDate;
-
-
-  document.getElementById(
-    'endDate'
-  ).value =
-    selectedDate;
-
-
-  document.getElementById(
-    'modal'
-  ).classList.remove(
-    'hidden'
-  );
-
+  const selectedDate = date || formatDate(new Date());
+  $('startDate').value = selectedDate;
+  $('endDate').value = selectedDate;
+  $('modal').classList.remove('hidden');
 }
-
-
-// ============================================================
-// EDIT EVENT
-// ============================================================
 
 function openEdit(id) {
-
-  const event =
-    events.find(
-      function (item) {
-
-        return (
-          String(item.id) ===
-          String(id)
-        );
-
-      }
-    );
-
-
+  const event = events.find(e => String(e.id) === String(id));
   if (!event) return;
 
-
-  editingId =
-    event.id;
-
-
-  document.getElementById(
-    'modalTitle'
-  ).textContent =
-    'Edit Event';
-
-
-  document.getElementById(
-    'eventId'
-  ).value =
-    event.id;
-
-
-  document.getElementById(
-    'title'
-  ).value =
-    event.title;
-
-
-  document.getElementById(
-    'category'
-  ).value =
-    event.category;
-
-
-  document.getElementById(
-    'startDate'
-  ).value =
-    event.startDate;
-
-
-  document.getElementById(
-    'endDate'
-  ).value =
-    event.endDate ||
-    event.startDate;
-
-
-  document.getElementById(
-    'startTime'
-  ).value =
-    event.startTime ||
-    '';
-
-
-  document.getElementById(
-    'endTime'
-  ).value =
-    event.endTime ||
-    '';
-
-
-  document.getElementById(
-    'location'
-  ).value =
-    event.location ||
-    '';
-
-
-  document.getElementById(
-    'description'
-  ).value =
-    event.description ||
-    '';
-
-
-  document.getElementById(
-    'recurring'
-  ).value =
-    event.recurring ||
-    'None';
-
-
-  document.getElementById(
-    'deleteBtn'
-  ).style.display =
-    'block';
-
-
-  document.getElementById(
-    'modal'
-  ).classList.remove(
-    'hidden'
-  );
-
+  editingId = event.id;
+  $('modalTitle').textContent = 'Edit Event';
+  $('eventId').value = event.id;
+  $('title').value = event.title;
+  $('category').value = event.category;
+  $('startDate').value = event.startDate;
+  $('endDate').value = event.endDate || event.startDate;
+  $('startTime').value = event.startTime || '';
+  $('endTime').value = event.endTime || '';
+  $('location').value = event.location || '';
+  $('description').value = event.description || '';
+  $('recurring').value = event.recurring || 'None';
+  $('deleteBtn').style.display = 'block';
+  $('modal').classList.remove('hidden');
 }
-
-
-// ============================================================
-// CLOSE MODAL
-// ============================================================
 
 function closeModal() {
-
-  document.getElementById(
-    'modal'
-  ).classList.add(
-    'hidden'
-  );
-
+  $('modal').classList.add('hidden');
 }
-
-
-// ============================================================
-// SAVE EVENT
-// ============================================================
 
 async function saveEvent(e) {
-
   e.preventDefault();
 
-
   const event = {
-
-    id:
-      document.getElementById(
-        'eventId'
-      ).value,
-
-    title:
-      document.getElementById(
-        'title'
-      ).value.trim(),
-
-    category:
-      document.getElementById(
-        'category'
-      ).value,
-
-    startDate:
-      document.getElementById(
-        'startDate'
-      ).value,
-
-    endDate:
-      document.getElementById(
-        'endDate'
-      ).value,
-
-    startTime:
-      document.getElementById(
-        'startTime'
-      ).value,
-
-    endTime:
-      document.getElementById(
-        'endTime'
-      ).value,
-
-    location:
-      document.getElementById(
-        'location'
-      ).value.trim(),
-
-    description:
-      document.getElementById(
-        'description'
-      ).value.trim(),
-
-    recurring:
-      document.getElementById(
-        'recurring'
-      ).value
-
+    id: $('eventId').value,
+    title: $('title').value.trim(),
+    category: $('category').value,
+    startDate: $('startDate').value,
+    endDate: $('endDate').value || $('startDate').value,
+    startTime: $('startTime').value,
+    endTime: $('endTime').value,
+    location: $('location').value.trim(),
+    description: $('description').value.trim(),
+    recurring: $('recurring').value
   };
 
-
-  if (
-    !event.endDate
-  ) {
-
-    event.endDate =
-      event.startDate;
-
-  }
-
-
-  if (
-    !event.title ||
-    !event.startDate
-  ) {
-
-    showToast(
-      'Enter a title and date.'
-    );
-
+  if (!event.title || !event.startDate) {
+    showToast('Enter an event title and date.');
     return;
-
   }
 
+  if (API_URL.includes('PASTE_')) {
+    showToast('Add your Apps Script /exec URL in app.js first.');
+    return;
+  }
 
   showLoading();
 
-
   try {
+    const result = await apiAction(editingId ? 'update' : 'add', event);
 
-    const params =
-      new URLSearchParams();
-
-
-    params.set(
-      'action',
-      editingId
-        ? 'update'
-        : 'add'
-    );
-
-
-    params.set(
-      'data',
-      JSON.stringify(
-        event
-      )
-    );
-
-
-    await fetch(
-      API_URL,
-      {
-        method: 'POST',
-        body: params
-      }
-    );
-
+    if (!result.success) {
+      throw new Error(result.message || 'Save failed.');
+    }
 
     closeModal();
-
-
-    await wait(
-      1000
-    );
-
-
-    loadEvents();
-
-
-    showToast(
-      editingId
-        ? 'Event updated.'
-        : 'Event added.'
-    );
-
-  }
-
-  catch (error) {
-
-    console.error(
-      error
-    );
-
-
-    showToast(
-      'Could not save event.'
-    );
-
-  }
-
-  finally {
-
+    await wait(500);
+    await loadEvents();
+    showToast(editingId ? 'Event updated.' : 'Event added.');
+  } catch (err) {
+    console.error(err);
+    showToast('Could not save event: ' + err.message);
+  } finally {
     hideLoading();
-
   }
-
 }
-
-
-// ============================================================
-// DELETE
-// ============================================================
 
 async function deleteCurrent() {
-
   if (!editingId) return;
+  if (!confirm('Delete this event?')) return;
 
-
-  if (
-    !confirm(
-      'Delete this event?'
-    )
-  ) {
-
+  if (API_URL.includes('PASTE_')) {
+    showToast('Add your Apps Script /exec URL in app.js first.');
     return;
-
   }
-
 
   showLoading();
 
-
   try {
+    const result = await apiAction('delete', editingId);
 
-    const params =
-      new URLSearchParams();
-
-
-    params.set(
-      'action',
-      'delete'
-    );
-
-
-    params.set(
-      'id',
-      editingId
-    );
-
-
-    await fetch(
-      API_URL,
-      {
-        method: 'POST',
-        body: params
-      }
-    );
-
+    if (!result.success) {
+      throw new Error(result.message || 'Delete failed.');
+    }
 
     closeModal();
-
-
-    await wait(
-      1000
-    );
-
-
-    loadEvents();
-
-
-    showToast(
-      'Event deleted.'
-    );
-
-  }
-
-  catch (error) {
-
-    console.error(
-      error
-    );
-
-
-    showToast(
-      'Could not delete event.'
-    );
-
-  }
-
-  finally {
-
+    await wait(500);
+    await loadEvents();
+    showToast('Event deleted.');
+  } catch (err) {
+    console.error(err);
+    showToast('Could not delete event: ' + err.message);
+  } finally {
     hideLoading();
-
   }
-
 }
 
-
-// ============================================================
-// HELPERS
-// ============================================================
-
-function parseDate(
-  value
-) {
-
-  const parts =
-    value.split('-');
-
-
-  return new Date(
-    Number(parts[0]),
-    Number(parts[1]) - 1,
-    Number(parts[2])
-  );
-
+function parseDate(s) {
+  const p = s.split('-');
+  return new Date(+p[0], +p[1]-1, +p[2]);
 }
 
-
-function formatDate(
-  date
-) {
-
-  const y =
-    date.getFullYear();
-
-
-  const m =
-    String(
-      date.getMonth() + 1
-    ).padStart(
-      2,
-      '0'
-    );
-
-
-  const d =
-    String(
-      date.getDate()
-    ).padStart(
-      2,
-      '0'
-    );
-
-
-  return (
-    y +
-    '-' +
-    m +
-    '-' +
-    d
-  );
-
+function formatDate(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
 }
 
-
-function displayDate(
-  value
-) {
-
-  return parseDate(
-    value
-  ).toLocaleDateString(
-    'en-IN',
-    {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    }
-  );
-
+function displayDate(s) {
+  return parseDate(s).toLocaleDateString('en-IN', {
+    day:'numeric', month:'short', year:'numeric'
+  });
 }
 
-
-function displayTime(
-  value
-) {
-
-  if (!value) return '';
-
-
-  const parts =
-    value.split(':');
-
-
-  let hour =
-    Number(parts[0]);
-
-
-  const minute =
-    parts[1];
-
-
-  const ampm =
-    hour >= 12
-      ? 'PM'
-      : 'AM';
-
-
-  hour =
-    hour % 12 ||
-    12;
-
-
-  return (
-    hour +
-    ':' +
-    minute +
-    ' ' +
-    ampm
-  );
-
+function displayTime(s) {
+  if (!s) return '';
+  const p = s.split(':');
+  let h = +p[0];
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return h + ':' + p[1] + ' ' + ap;
 }
 
-
-function isSameDay(
-  a,
-  b
-) {
-
-  return (
-    a.getFullYear() ===
-      b.getFullYear() &&
-
-    a.getMonth() ===
-      b.getMonth() &&
-
-    a.getDate() ===
-      b.getDate()
-  );
-
+function sameDay(a,b) {
+  return a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
 }
 
-
-function compareEvents(
-  a,
-  b
-) {
-
-  return (
-    a.startDate +
-    ' ' +
-    (a.startTime ||
-      '00:00')
-  ).localeCompare(
-    b.startDate +
-    ' ' +
-    (b.startTime ||
-      '00:00')
-  );
-
+function compareEvents(a,b) {
+  return (a.startDate+' '+(a.startTime||'00:00'))
+    .localeCompare(b.startDate+' '+(b.startTime||'00:00'));
 }
 
-
-function categoryName(
-  category
-) {
-
-  const names = {
-
-    Supervisor:
-      'Supervisor',
-
-    Viva:
-      'Viva',
-
-    Class:
-      'Class',
-
-    ExtraClass:
-      'Extra Class',
-
-    Exam:
-      'Exam',
-
-    Submission:
-      'Submission',
-
-    Office:
-      'Office Work',
-
-    Professor:
-      'Professor Meeting',
-
-    Conference:
-      'Conference',
-
-    Abstract:
-      'Abstract',
-
-    Presentation:
-      'Presentation',
-
-    LabHours:
-      'Lab Hours',
-
-    LabClass:
-      'Lab Class',
-
-    Other:
-      'Other'
-
-  };
-
-
-  return (
-    names[category] ||
-    category
-  );
-
+function categoryName(c) {
+  return ({
+    Supervisor:'Supervisor',
+    Viva:'Viva',
+    Class:'Class',
+    ExtraClass:'Extra Class',
+    Exam:'Exam',
+    Submission:'Submission',
+    Office:'Office Work',
+    Professor:'Professor Meeting',
+    Conference:'Conference',
+    Abstract:'Abstract',
+    Presentation:'Presentation',
+    LabHours:'Lab Hours',
+    LabClass:'Lab Class',
+    Other:'Other'
+  })[c] || c;
 }
 
-
-function escapeHtml(
-  text
-) {
-
-  return String(
-    text
-  ).replace(
-    /[&<>"']/g,
-    function (char) {
-
-      return {
-
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-
-      }[char];
-
-    }
-  );
-
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[c]));
 }
 
+function $(id) { return document.getElementById(id); }
+function showLoading() { $('loading').classList.remove('hidden'); }
+function hideLoading() { $('loading').classList.add('hidden'); }
 
-function showLoading() {
-
-  document
-    .getElementById(
-      'loading'
-    )
-    .classList.remove(
-      'hidden'
-    );
-
+let toastTimer;
+function showToast(message) {
+  const toast = $('toast');
+  toast.textContent = message;
+  toast.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.style.display = 'none', 3500);
 }
 
-
-function hideLoading() {
-
-  document
-    .getElementById(
-      'loading'
-    )
-    .classList.add(
-      'hidden'
-    );
-
-}
-
-
-function showToast(
-  message
-) {
-
-  const toast =
-    document.getElementById(
-      'toast'
-    );
-
-
-  toast.textContent =
-    message;
-
-
-  toast.style.display =
-    'block';
-
-
-  clearTimeout(
-    window.toastTimer
-  );
-
-
-  window.toastTimer =
-    setTimeout(
-      function () {
-
-        toast.style.display =
-          'none';
-
-      },
-      3000
-    );
-
-}
-
-
-function wait(
-  milliseconds
-) {
-
-  return new Promise(
-    function (resolve) {
-
-      setTimeout(
-        resolve,
-        milliseconds
-      );
-
-    }
-  );
-
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }

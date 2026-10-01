@@ -1,25 +1,9 @@
-# Academic Calendar PWA
+# Academic Calendar PWA — fixed JSONP version
 
-## Files
+1. In Apps Script replace Code.gs with the supplied Code.gs.
+2. Deploy/update the Web App. Use the `/exec` URL.
+3. In app.js replace PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE with that URL.
+4. Upload index.html, style.css, app.js, manifest.json, sw.js and icons/ to GitHub Pages.
+5. Clear the old service worker/site data once before testing the new version.
 
-- `index.html` — app interface
-- `style.css` — mobile/calendar styling
-- `app.js` — calendar logic and Apps Script connection
-- `manifest.json` — installable PWA configuration
-- `sw.js` — offline app shell
-- `Code.gs` — Google Apps Script backend
-- `icons/` — app icons
-
-## Important
-
-Before publishing the PWA:
-
-1. Deploy `Code.gs` as an Apps Script Web App.
-2. Copy its `/exec` URL.
-3. Open `app.js`.
-4. Replace:
-   `PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE`
-   with your real `/exec` URL.
-5. Upload the PWA files to GitHub Pages.
-
-The calendar data remains in the Google Sheet used by the Apps Script project.
+This version uses JSONP GET requests for reading and writing so the GitHub Pages frontend does not make CORS fetch requests to Apps Script.
