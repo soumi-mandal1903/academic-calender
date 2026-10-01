@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase Test</title>
+</head>
+
+<body>
+
+<h2>Firebase API Test</h2>
+
+<button id="testBtn">Test Firebase Installations</button>
+
+<pre id="output"></pre>
+
+<script type="module">
+
+import { initializeApp } from
+  "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+
+import {
+  getInstallations,
+  getId
+} from
+  "https://www.gstatic.com/firebasejs/12.3.0/firebase-installations.js";
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCv60MSfO9ScTsSUwKYrE_vWPRda9frLGA",
+  authDomain: "academic-calendar-4031f.firebaseapp.com",
+  projectId: "academic-calendar-4031f",
+  storageBucket: "academic-calendar-4031f.firebasestorage.app",
+  messagingSenderId: "753448578557",
+  appId: "1:753448578557:web:f89f3a9db31ee58ec07d94"
+};
+
+
+const output = document.getElementById("output");
+
+
+function log(message) {
+
+  output.textContent += message + "\n";
+
+  console.log(message);
+
+}
+
+
+try {
+
+  log("Initializing Firebase...");
+
+  const app = initializeApp(firebaseConfig);
+
+  log("Firebase initialized successfully.");
+
+  const installations = getInstallations(app);
+
+  log("Firebase Installations initialized.");
+
+  document.getElementById("testBtn").onclick =
+    async () => {
+
+      try {
+
+        log("Requesting Installation ID...");
+
+        const id = await getId(installations);
+
+        log("SUCCESS!");
+        log("");
+        log("Installation ID:");
+        log(id);
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        log("");
+        log("FAILED:");
+        log(error.message);
+
+      }
+
+    };
+
+
+}
+catch (error) {
+
+  console.error(error);
+
+  log("Firebase initialization failed:");
+  log(error.message);
+
+}
+
+</script>
+
+</body>
+</html>
