@@ -1,11 +1,10 @@
 // ============================================================
-// ACADEMIC CALENDAR PWA SERVICE WORKER
-// Firebase Cloud Messaging enabled
+// ACADEMIC CALENDAR
+// PWA SERVICE WORKER + FIREBASE CLOUD MESSAGING
 // ============================================================
 
-
 // ------------------------------------------------------------
-// FIREBASE
+// FIREBASE CONFIGURATION
 // ------------------------------------------------------------
 
 importScripts(
@@ -16,38 +15,54 @@ importScripts(
   'https://www.gstatic.com/firebasejs/12.3.0/firebase-messaging-compat.js'
 );
 
-
-// ------------------------------------------------------------
-// FIREBASE CONFIGURATION
-// ------------------------------------------------------------
-
 firebase.initializeApp({
-
-  apiKey: "AIzaSyCv60MSf09ScTsSUwKYrE_vWPRda9frLGA",
-
-  authDomain:
-    "academic-calendar-4031f.firebaseapp.com",
-
-  projectId:
-    "academic-calendar-4031f",
-
-  storageBucket:
-    "academic-calendar-4031f.firebasestorage.app",
-
-  messagingSenderId:
-    "753448578557",
-
-  appId:
-    "1:753448578557:web:f89f3a9db31ee58ec07d94"
-
+  apiKey: "AIzaSyCv60MSfO9ScTsSUwKYrE_vWPRda9frLGA",
+  authDomain: "academic-calendar-4031f.firebaseapp.com",
+  projectId: "academic-calendar-4031f",
+  storageBucket: "academic-calendar-4031f.firebasestorage.app",
+  messagingSenderId: "753448578557",
+  appId: "1:753448578557:web:f89f3a9db31ee58ec07d94"
 });
 
-
-// ------------------------------------------------------------
-// FIREBASE MESSAGING
-// ------------------------------------------------------------
-
 const messaging = firebase.messaging();
+
+
+// ------------------------------------------------------------
+// FIREBASE BACKGROUND NOTIFICATIONS
+// ------------------------------------------------------------
+
+messaging.onBackgroundMessage((payload) => {
+
+  console.log(
+    '[Firebase Messaging] Background message:',
+    payload
+  );
+
+  const notificationTitle =
+    payload.notification?.title ||
+    payload.data?.title ||
+    'Academic Calendar';
+
+  const notificationOptions = {
+
+    body:
+      payload.notification?.body ||
+      payload.data?.body ||
+      'You have a new academic calendar notification.',
+
+    icon: './icons/icon-192.png',
+
+    badge: './icons/icon-192.png',
+
+    data: payload.data || {}
+
+  };
+
+  self.registration.showNotification(
+    notificationTitle,
+    notificationOptions
+  );
+});
 
 
 // ------------------------------------------------------------
@@ -56,25 +71,15 @@ const messaging = firebase.messaging();
 
 const CACHE = 'academic-calendar-v3';
 
-
 const ASSETS = [
-
   './',
-
   './index.html',
-
   './style.css?v=2',
-
   './app.js?v=2',
-
-  './notifications.js?v=3',
-
+  './notifications.js?v=4',
   './manifest.json',
-
   './icons/icon-192.png',
-
   './icons/icon-512.png'
-
 ];
 
 
@@ -82,123 +87,78 @@ const ASSETS = [
 // INSTALL
 // ------------------------------------------------------------
 
-self.addEventListener(
-  'install',
-  event => {
+self.addEventListener('install', (event) => {
 
-    event.waitUntil(
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => {
+      return cache.addAll(ASSETS);
+    })
+  );
 
-      caches
-        .open(CACHE)
-        .then(cache => cache.addAll(ASSETS))
+  self.skipWaiting();
 
-    );
-
-    self.skipWaiting();
-
-  }
-);
+});
 
 
 // ------------------------------------------------------------
 // ACTIVATE
 // ------------------------------------------------------------
 
-self.addEventListener(
-  'activate',
-  event => {
+self.addEventListener('activate', (event) => {
 
-    event.waitUntil(
+  event.waitUntil(
 
-      caches
-        .keys()
-        .then(keys =>
+    caches.keys().then((keys) => {
 
-          Promise.all(
+      return Promise.all(
 
-            keys
+        keys
+          .filter((key) => key !== CACHE)
+          .map((key) => caches.delete(key))
 
-              .filter(
+      );
 
-                key =>
-                  key.startsWith('academic-calendar-') &&
-                  key !== CACHE
+    })
 
-              )
+  );
 
-              .map(
-                key => caches.delete(key)
-              )
+  self.clients.claim();
 
-          )
-
-        )
-
-    );
-
-    self.clients.claim();
-
-  }
-);
+});
 
 
 // ------------------------------------------------------------
-// FETCH
+// FETCH / OFFLINE CACHE
 // ------------------------------------------------------------
 
-self.addEventListener(
-  'fetch',
-  event => {
+self.addEventListener('fetch', (event) => {
 
-    if (
-
-      event.request.method !== 'GET' ||
-
-      new URL(event.request.url).origin !==
-        self.location.origin
-
-    ) {
-
-      return;
-
-    }
-
-
-    event.respondWith(
-
-      fetch(event.request)
-
-        .then(response => {
-
-          if (response.ok) {
-
-            const copy = response.clone();
-
-            caches
-              .open(CACHE)
-              .then(cache => {
-
-                cache.put(
-                  event.request,
-                  copy
-                );
-
-              });
-
-          }
-
-          return response;
-
-        })
-
-        .catch(
-
-          () =>
-            caches.match(event.request)
-
-        )
-
-    );
-
+  if (event.request.method !== 'GET') {
+    return;
   }
-);
+
+  event.respondWith(
+
+    fetch(event.request)
+
+      .then((response) => {
+
+        const copy = response.clone();
+
+        caches.open(CACHE).then((cache) => {
+          cache.put(event.request, copy);
+        });
+
+        return response;
+
+      })
+
+      .catch(() => {
+
+        return caches.match(event.request);
+
+      })
+
+  );
+
+});
