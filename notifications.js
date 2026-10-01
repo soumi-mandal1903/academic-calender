@@ -3,28 +3,15 @@
 // FIREBASE PUSH NOTIFICATIONS
 // ============================================================
 
-
-// ------------------------------------------------------------
-// FIREBASE IMPORTS
-// ------------------------------------------------------------
-
 import {
-
   initializeApp
-
 } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js';
 
-
 import {
-
   getMessaging,
-
   getToken,
-
   onMessage,
-
   isSupported
-
 } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-messaging.js';
 
 
@@ -35,16 +22,16 @@ import {
 const firebaseConfig = {
 
   apiKey:
-    "AIzaSyCv60MSf09ScTsSUwKYrE_vWPRda9frLGA",
+    "AIzaSyCv60MSfO9ScTsSUwKYrE_vWPRda9frLGA",
 
   authDomain:
-    "academic-calendar-4031f.firebaseapp.com",
+    "academic-calendar-4031.firebaseapp.com",
 
   projectId:
-    "academic-calendar-4031f",
+    "academic-calendar-4031",
 
   storageBucket:
-    "academic-calendar-4031f.firebasestorage.app",
+    "academic-calendar-4031.firebasestorage.app",
 
   messagingSenderId:
     "753448578557",
@@ -64,24 +51,18 @@ const VAPID_KEY =
 
 
 // ------------------------------------------------------------
-// BUTTON
-// ------------------------------------------------------------
-
-const btn =
-  document.getElementById('notifyBtn');
-
-
-// ------------------------------------------------------------
 // INITIALIZE FIREBASE
 // ------------------------------------------------------------
 
-const app =
-  initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
 
 
 // ------------------------------------------------------------
-// STATUS HELPER
+// UI HELPERS
 // ------------------------------------------------------------
+
+const btn = document.getElementById('notifyBtn');
+
 
 function status(message) {
 
@@ -90,10 +71,7 @@ function status(message) {
     message
   );
 
-
-  if (
-    typeof showToast === 'function'
-  ) {
+  if (typeof showToast === 'function') {
 
     showToast(message);
 
@@ -107,32 +85,131 @@ function status(message) {
 
 
 // ------------------------------------------------------------
+// TOKEN PANEL
+// ------------------------------------------------------------
+
+const panel = document.createElement('div');
+
+panel.id = 'fcmTokenPanel';
+
+panel.hidden = true;
+
+panel.style.cssText =
+  'margin:12px auto;' +
+  'padding:12px;' +
+  'max-width:900px;' +
+  'border:1px solid #d1d5db;' +
+  'border-radius:10px;';
+
+
+panel.innerHTML = `
+
+  <strong>Firebase FCM test token</strong>
+
+  <p style="font-size:12px">
+
+    This token is private to this device/browser.
+    Use it only for Firebase Console testing.
+    Do not publish or share it.
+
+  </p>
+
+  <textarea
+    id="fcmTokenBox"
+    readonly
+    style="
+      width:100%;
+      min-height:75px;
+      box-sizing:border-box;
+    "
+  ></textarea>
+
+  <br><br>
+
+  <button
+    type="button"
+    id="copyFcmToken"
+  >
+    Copy token
+  </button>
+
+`;
+
+document.querySelector('main')?.prepend(panel);
+
+
+// ------------------------------------------------------------
+// COPY TOKEN
+// ------------------------------------------------------------
+
+document
+  .getElementById('copyFcmToken')
+  ?.addEventListener('click', async () => {
+
+    const token =
+      document.getElementById('fcmTokenBox').value;
+
+    try {
+
+      await navigator.clipboard.writeText(token);
+
+      status('FCM token copied.');
+
+    } catch {
+
+      document
+        .getElementById('fcmTokenBox')
+        .select();
+
+      status(
+        'Select the token and copy it manually.'
+      );
+
+    }
+
+  });
+
+
+// ------------------------------------------------------------
 // ENABLE NOTIFICATIONS
 // ------------------------------------------------------------
 
 async function enableNotifications() {
 
-  btn.disabled = true;
+  if (!btn) {
+    console.error(
+      '[Notifications] notifyBtn was not found.'
+    );
+    return;
+  }
 
+  btn.disabled = true;
 
   try {
 
     // --------------------------------------------------------
-    // CHECK BROWSER SUPPORT
+    // CHECK SUPPORT
     // --------------------------------------------------------
 
     if (
-
       !('serviceWorker' in navigator) ||
-
-      !('Notification' in window) ||
-
-      !(await isSupported())
-
+      !('Notification' in window)
     ) {
 
       throw new Error(
-        'Push notifications are not supported in this browser.'
+        'This browser does not support web push notifications.'
+      );
+
+    }
+
+
+    const supported =
+      await isSupported();
+
+    if (!supported) {
+
+      throw new Error(
+        'Firebase Cloud Messaging is not supported in this browser.'
       );
 
     }
@@ -145,10 +222,7 @@ async function enableNotifications() {
     const permission =
       await Notification.requestPermission();
 
-
-    if (
-      permission !== 'granted'
-    ) {
+    if (permission !== 'granted') {
 
       throw new Error(
         'Notification permission was not granted.'
@@ -157,8 +231,13 @@ async function enableNotifications() {
     }
 
 
+    console.log(
+      '[Notifications] Permission granted.'
+    );
+
+
     // --------------------------------------------------------
-    // REGISTER EXISTING PWA SERVICE WORKER
+    // USE EXISTING PWA SERVICE WORKER
     // --------------------------------------------------------
 
     const registration =
@@ -167,11 +246,22 @@ async function enableNotifications() {
       );
 
 
+    console.log(
+      '[Notifications] Service worker registered:',
+      registration
+    );
+
+
     await navigator.serviceWorker.ready;
 
 
+    console.log(
+      '[Notifications] Service worker ready.'
+    );
+
+
     // --------------------------------------------------------
-    // FIREBASE MESSAGING
+    // INITIALIZE FIREBASE MESSAGING
     // --------------------------------------------------------
 
     const messaging =
@@ -188,13 +278,8 @@ async function enableNotifications() {
         messaging,
 
         {
-
-          vapidKey:
-            VAPID_KEY,
-
-          serviceWorkerRegistration:
-            registration
-
+          vapidKey: VAPID_KEY,
+          serviceWorkerRegistration: registration
         }
 
       );
@@ -203,46 +288,39 @@ async function enableNotifications() {
     if (!token) {
 
       throw new Error(
-        'Firebase did not return a registration token.'
+        'Firebase did not return an FCM registration token.'
       );
 
     }
 
 
+    console.log(
+      '[Notifications] FCM registration token:',
+      token
+    );
+
+
     // --------------------------------------------------------
-    // UPDATE BUTTON
+    // SHOW TOKEN
     // --------------------------------------------------------
+
+    document
+      .getElementById('fcmTokenBox')
+      .value = token;
+
+
+    document
+      .getElementById('fcmTokenPanel')
+      .hidden = false;
+
 
     btn.textContent =
       'Notifications Enabled';
 
 
-    // --------------------------------------------------------
-    // SHOW STATUS
-    // --------------------------------------------------------
-
     status(
-      'Notifications enabled. Copy your test token from this device.'
+      'Notifications enabled. Your FCM token is ready for testing.'
     );
-
-
-    // --------------------------------------------------------
-    // DISPLAY TOKEN PANEL
-    // --------------------------------------------------------
-
-    const tokenBox =
-      document.getElementById(
-        'fcmTokenBox'
-      );
-
-
-    tokenBox.value =
-      token;
-
-
-    document.getElementById(
-      'fcmTokenPanel'
-    ).hidden = false;
 
 
     // --------------------------------------------------------
@@ -250,52 +328,48 @@ async function enableNotifications() {
     // --------------------------------------------------------
 
     onMessage(
-
       messaging,
+      (payload) => {
 
-      payload => {
+        console.log(
+          '[Notifications] Foreground message:',
+          payload
+        );
+
+
+        const title =
+          payload.notification?.title ||
+          'Academic Calendar';
+
+
+        const body =
+          payload.notification?.body ||
+          'You have a new notification.';
+
 
         status(
-
-          'Message received: ' +
-
-          (
-
-            payload.notification?.title ||
-
-            'Academic Calendar'
-
-          )
-
+          `${title}: ${body}`
         );
 
       }
-
     );
 
-  }
 
-
-  catch (error) {
+  } catch (error) {
 
     console.error(
-      '[Notifications]',
+      '[Notifications] Error:',
       error
     );
 
 
     status(
-
-      error.message ||
-
+      error?.message ||
       'Could not enable notifications.'
-
     );
 
-  }
 
-
-  finally {
+  } finally {
 
     btn.disabled = false;
 
@@ -305,126 +379,7 @@ async function enableNotifications() {
 
 
 // ------------------------------------------------------------
-// TOKEN PANEL
-// ------------------------------------------------------------
-
-const panel =
-  document.createElement('div');
-
-
-panel.id =
-  'fcmTokenPanel';
-
-
-panel.hidden =
-  true;
-
-
-panel.style.cssText =
-  'margin:12px auto;' +
-  'padding:12px;' +
-  'max-width:900px;' +
-  'border:1px solid #d1d5db;' +
-  'border-radius:10px';
-
-
-panel.innerHTML = `
-
-  <strong>
-    Firebase test token (private)
-  </strong>
-
-  <p style="font-size:12px">
-
-    Copy this on your own device for
-    Firebase Console → Messaging →
-    Send test message.
-
-    Do not publish or share it.
-
-  </p>
-
-  <textarea
-    id="fcmTokenBox"
-    readonly
-    style="width:100%;min-height:75px"
-  ></textarea>
-
-  <button
-    type="button"
-    id="copyFcmToken"
-  >
-    Copy token
-  </button>
-
-`;
-
-
-// ------------------------------------------------------------
-// ADD TOKEN PANEL TO PAGE
-// ------------------------------------------------------------
-
-document
-  .querySelector('main')
-  ?.prepend(panel);
-
-
-// ------------------------------------------------------------
-// COPY TOKEN BUTTON
-// ------------------------------------------------------------
-
-document
-  .getElementById(
-    'copyFcmToken'
-  )
-  .addEventListener(
-
-    'click',
-
-    async () => {
-
-      const token =
-        document.getElementById(
-          'fcmTokenBox'
-        ).value;
-
-
-      try {
-
-        await navigator.clipboard.writeText(
-          token
-        );
-
-
-        status(
-          'Token copied.'
-        );
-
-      }
-
-
-      catch {
-
-        document
-          .getElementById(
-            'fcmTokenBox'
-          )
-          .select();
-
-
-        status(
-          'Select and copy the token manually.'
-        );
-
-      }
-
-    }
-
-  );
-
-
-// ------------------------------------------------------------
-// BUTTON EVENT
+// BUTTON
 // ------------------------------------------------------------
 
 btn?.addEventListener(
